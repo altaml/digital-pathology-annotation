@@ -14,7 +14,7 @@ class Webhook(models.Model):
         db_table = 'webhook'
 
 
-class WebhookAction:
+class WebhookAction(models.Model):
     PROJECT_CREATED = 'PROJECT_CREATED'
     PROJECT_PUBLISHED = 'PROJECT_PUBLISHED'
     PROJECT_FINISHED = 'PROJECT_FINISHED'
