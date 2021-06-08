@@ -145,7 +145,8 @@ INSTALLED_APPS = [
     'tasks',
     'data_manager',
     'io_storages',
-    'ml'
+    'ml',
+    'webhooks',
 ]
 
 MIDDLEWARE = [
