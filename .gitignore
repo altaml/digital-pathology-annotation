@@ -1,8 +1,8 @@
 node_modules
 *.lock
 *.pyc
+*.ipynb
 __pycache__
-
 
 # docs
 __generated__
