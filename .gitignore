@@ -19,6 +19,7 @@ env/
 venv/
 .venv
 .vscode
+.autoenv
 # web/static
 
 deploy/license.txt
