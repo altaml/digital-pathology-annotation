@@ -5,6 +5,9 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 import logging
 
+from projects.models import Project
+from tasks.models import Task, Annotation
+from .serializers_for_hooks import OnlyIDWebhookSerializer, ProjectWebhookSerializer, TaskWebhookSerializer, AnnotationWebhookSerializer
 
 HEADERS_SCHEMA = {
     "type": "object",
@@ -52,39 +55,6 @@ class Webhook(models.Model):
     def has_permission(self, user):
         return self.organization.has_user(user)
 
-    def run_webhook(self, action, payload=None):
-        data = {
-            'action': action,
-        }
-        if self.send_payload and payload:
-            data.update(payload)
-        try:
-            return requests.post(
-                self.url,
-                headers=self.headers,
-                json=data,
-                timeout=settings.WEBHOOK_TIMEOUT,
-            )
-        except requests.RequestException as exc:
-            logging.error(exc, exc_info=True)
-            return
-
-    @staticmethod
-    def emit_event(organization, action, payload=None):
-        webhooks = Webhook.objects.filter(
-            models.Q(organization=organization) &
-            models.Q(is_active=True) &
-            (
-                models.Q(send_for_all_actions=True) |
-                models.Q(id__in=WebhookAction.objects.filter(
-                    webhook__organization=organization,
-                    action=action
-                ).values_list('webhook_id', flat=True))
-            )
-        )
-        for wh in webhooks:
-            wh.run_webhook(action, payload)
-
     class Meta:
         db_table = 'webhook'
 
@@ -110,39 +80,66 @@ class WebhookAction(models.Model):
     ACTIONS = {
         PROJECT_CREATED: {
             'name': _('Project created'),
-            'description': _('')
+            'description': _(''),
+            'key': 'projects',
+            'model': Project,
+            'serializer': ProjectWebhookSerializer,
         },
         PROJECT_UPDATED: {
             'name': _('Project updated'),
-            'description': _('')
+            'description': _(''),
+            'key': 'projects',
+            'model': Project,
+            'serializer': ProjectWebhookSerializer,
         },
         PROJECT_DELETED: {
             'name': _('Project deleted'),
-            'description': _('')
+            'description': _(''),
+            'key': 'projects',
+            'model': Project,
+            'serializer': OnlyIDWebhookSerializer,
         },
         TASK_CREATED: {
             'name': _('Task created'),
-            'description': _('')
+            'description': _(''),
+            'key': 'tasks',
+            'model': Task,
+            'serializer': TaskWebhookSerializer,
         },
         TASK_UPDATED: {
             'name': _('Task updated'),
-            'description': _('')
+            'description': _(''),
+            'key': 'tasks',
+            'model': Task,
+            'serializer': TaskWebhookSerializer,
         },
         TASK_DELETED: {
             'name': _('Task deleted'),
-            'description': _('')
+            'description': _(''),
+            'key': 'tasks',
+            'model': Task,
+            'serializer': OnlyIDWebhookSerializer,
         },
         ANNOTATION_CREATED: {
             'name': _('Annotation created'),
-            'description': _('')
+            'description': _(''),
+            'key': 'annotations',
+            'model': Annotation,
+            'serializer': AnnotationWebhookSerializer,
         },
         ANNOTATION_UPDATED: {
             'name': _('Annotation updated'),
-            'description': _('')
+            'description': _(''),
+            'key': 'annotations',
+            'model': Annotation,
+            'serializer': AnnotationWebhookSerializer,
         },
         ANNOTATION_DELETED: {
             'name': _('Annotation deleted'),
-            'description': _('')
+            'description': _(''),
+            'key': 'annotations',
+            'model': Annotation,
+            'serializer': OnlyIDWebhookSerializer,
         },
     }
 

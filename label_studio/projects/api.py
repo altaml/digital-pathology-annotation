@@ -129,7 +129,7 @@ class ProjectListAPI(generics.ListCreateAPIView):
         return super(ProjectListAPI, self).get(request, *args, **kwargs)
 
     @swagger_auto_schema(tags=['Projects'], request_body=ProjectSerializer)
-    @api_webhook(WebhookAction.PROJECT_CREATED, 'project')
+    @api_webhook(WebhookAction.PROJECT_CREATED)
     def post(self, request, *args, **kwargs):
         return super(ProjectListAPI, self).post(request, *args, **kwargs)
 
@@ -175,12 +175,12 @@ class ProjectAPI(APIViewVirtualRedirectMixin,
         return super(ProjectAPI, self).get(request, *args, **kwargs)
 
     @swagger_auto_schema(tags=['Projects'])
-    @api_delete_webhook(WebhookAction.PROJECT_DELETED, 'project_id')
+    @api_delete_webhook(WebhookAction.PROJECT_DELETED)
     def delete(self, request, *args, **kwargs):
         return super(ProjectAPI, self).delete(request, *args, **kwargs)
 
     @swagger_auto_schema(tags=['Projects'], request_body=ProjectSerializer)
-    @api_webhook(WebhookAction.PROJECT_UPDATED, 'project')
+    @api_webhook(WebhookAction.PROJECT_UPDATED)
     def patch(self, request, *args, **kwargs):
         project = self.get_object()
         label_config = self.request.data.get('label_config')
@@ -215,12 +215,12 @@ class ProjectAPI(APIViewVirtualRedirectMixin,
             instance.delete()
 
     @swagger_auto_schema(auto_schema=None)
-    @api_webhook(WebhookAction.PROJECT_UPDATED, 'project')
+    @api_webhook(WebhookAction.PROJECT_UPDATED)
     def post(self, request, *args, **kwargs):
         return super(ProjectAPI, self).post(request, *args, **kwargs)
 
     @swagger_auto_schema(auto_schema=None)
-    @api_webhook(WebhookAction.PROJECT_UPDATED, 'project')
+    @api_webhook(WebhookAction.PROJECT_UPDATED)
     def put(self, request, *args, **kwargs):
         return super(ProjectAPI, self).put(request, *args, **kwargs)
 
@@ -583,17 +583,17 @@ class TasksListAPI(generics.ListCreateAPIView,
     @swagger_auto_schema(tags=['Projects'])
     def delete(self, request, *args, **kwargs):
         project = generics.get_object_or_404(Project.objects.for_user(self.request.user), pk=self.kwargs['pk'])
-        task_ids = list(Task.objects.filter(project=project).values_list('id', flat=True))
+        task_ids = list(Task.objects.filter(project=project).values('id'))
         Task.objects.filter(project=project).delete()
-        Webhook.emit_event(request.user.active_organization, WebhookAction.TASK_DELETED, {'task_ids': task_ids})
-        return Response(status=204)
+        Webhook.emit_event(request.user.active_organization, WebhookAction.TASK_DELETED, task_ids)
+        return Response(data={'tasks': task_ids}, status=204)
 
     @swagger_auto_schema(**paginator_help('tasks', 'Projects'))
     def get(self, *args, **kwargs):
         return super(TasksListAPI, self).get(*args, **kwargs)
 
     @swagger_auto_schema(auto_schema=None, tags=['Projects'])
-    @api_webhook(WebhookAction.TASK_CREATED, 'task')
+    @api_webhook(WebhookAction.TASK_CREATED)
     def post(self, *args, **kwargs):
         return super(TasksListAPI, self).post(*args, **kwargs)
 
