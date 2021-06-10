@@ -15,8 +15,9 @@ class WebhookSerializer(serializers.ModelSerializer):
     class Meta:
         model = Webhook
         fields = ('id', 'organization', 'url', 'send_payload',
-                  'send_for_all_actions', 'headers', 'is_active', 'actions',)
-        read_only_fields = ('id', 'organization',)
+                  'send_for_all_actions', 'headers', 'is_active', 'actions', 
+                  'created_at', 'updated_at')
+        read_only_fields = ('id', 'organization', 'created_at', 'updated_at')
 
     def create(self, validated_data):
         actions = validated_data.pop('_actions', [])

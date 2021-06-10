@@ -25,6 +25,8 @@ from tasks.serializers import (
     TaskSerializer, AnnotationSerializer, TaskSimpleSerializer, PredictionSerializer,
     TaskWithAnnotationsAndPredictionsAndDraftsSerializer, AnnotationDraftSerializer)
 from projects.models import Project
+from webhooks.utils import api_webhook
+from webhooks.models import WebhookAction
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,7 @@ class TaskListAPI(generics.ListCreateAPIView):
         return context
 
     @swagger_auto_schema(tags=['Tasks'], request_body=TaskSerializer)
+    @api_webhook(WebhookAction.TASK_CREATED, 'task')
     def post(self, request, *args, **kwargs):
         return super(TaskListAPI, self).post(request, *args, **kwargs)
 
@@ -108,14 +111,17 @@ class TaskAPI(generics.RetrieveUpdateDestroyAPIView):
         return super(TaskAPI, self).get(request, *args, **kwargs)
 
     @swagger_auto_schema(tags=['Tasks'], request_body=TaskSimpleSerializer)
+    @api_webhook(WebhookAction.TASK_UPDATED, 'task')
     def patch(self, request, *args, **kwargs):
         return super(TaskAPI, self).patch(request, *args, **kwargs)
 
     @swagger_auto_schema(tags=['Tasks'])
+    @api_webhook(WebhookAction.TASK_DELETED, 'task')
     def delete(self, request, *args, **kwargs):
         return super(TaskAPI, self).delete(request, *args, **kwargs)
 
     @swagger_auto_schema(auto_schema=None)
+    @api_webhook(WebhookAction.TASK_UPDATED, 'task')
     def put(self, request, *args, **kwargs):
         return super(TaskAPI, self).put(request, *args, **kwargs)
 

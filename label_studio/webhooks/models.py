@@ -1,6 +1,9 @@
+import requests
 from core.validators import JSONSchemaValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
+import logging
 
 
 HEADERS_SCHEMA = {
@@ -27,7 +30,10 @@ class Webhook(models.Model):
                                validators=[JSONSchemaValidator(HEADERS_SCHEMA)],
                                default=dict)
 
-    is_active = models.BooleanField(_("Is webhook active"), default=True)
+    is_active = models.BooleanField(_("is webhook active"), default=True)
+
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
 
     def get_actions(self):
         return WebhookAction.objects.filter(webhook=self).values_list('action', flat=True)
@@ -46,30 +52,107 @@ class Webhook(models.Model):
     def has_permission(self, user):
         return self.organization.has_user(user)
 
+    def run_webhook(self, action, payload=None):
+        data = {
+            'action': action,
+        }
+        if self.send_payload and payload:
+            data.update(payload)
+        try:
+            return requests.post(
+                self.url,
+                headers=self.headers,
+                json=data,
+                timeout=settings.WEBHOOK_TIMEOUT,
+            )
+        except requests.RequestException as exc:
+            logging.error(exc, exc_info=True)
+            return
+
+    @staticmethod
+    def emit_event(organization, action, payload=None):
+        webhooks = Webhook.objects.filter(
+            models.Q(organization=organization) &
+            models.Q(is_active=True) &
+            (
+                models.Q(send_for_all_actions=True) |
+                models.Q(id__in=WebhookAction.objects.filter(
+                    webhook__organization=organization,
+                    action=action
+                ).values_list('webhook_id', flat=True))
+            )
+        )
+        for wh in webhooks:
+            wh.run_webhook(action, payload)
+
     class Meta:
         db_table = 'webhook'
 
 
 class WebhookAction(models.Model):
     PROJECT_CREATED = 'PROJECT_CREATED'
-    PROJECT_PUBLISHED = 'PROJECT_PUBLISHED'
-    PROJECT_FINISHED = 'PROJECT_FINISHED'
+    PROJECT_UPDATED = 'PROJECT_UPDATED'
+    PROJECT_DELETED = 'PROJECT_DELETED'
+
+    # PROJECT_PUBLISHED = 'PROJECT_PUBLISHED'
+    # PROJECT_FINISHED = 'PROJECT_FINISHED'
+
+    TASK_CREATED = 'TASK_CREATED'
+    TASK_UPDATED = 'TASK_UPDATED'
+    TASK_DELETED = 'TASK_DELETED'
+
     ANNOTATION_CREATED = 'ANNOTATION_CREATED'
     ANNOTATION_UPDATED = 'ANNOTATION_UPDATED'
-    TASKS_IMPORTED = 'TASKS_IMPORTED'
+    ANNOTATION_DELETED = 'ANNOTATION_DELETED'
 
-    ACTIONS = [
-        [PROJECT_CREATED, _('Project created')],
-        [PROJECT_PUBLISHED, _('Project published')],
-        [PROJECT_FINISHED, _('Project finished')],
-        [ANNOTATION_CREATED, _('Annotation created')],
-        [ANNOTATION_UPDATED, _('Annotation updated')],
-        [TASKS_IMPORTED, _('Tasks imported')],
-    ]
+    # TASKS_IMPORTED = 'TASKS_IMPORTED'
+
+    ACTIONS = {
+        PROJECT_CREATED: {
+            'name': _('Project created'),
+            'description': _('')
+        },
+        PROJECT_UPDATED: {
+            'name': _('Project updated'),
+            'description': _('')
+        },
+        PROJECT_DELETED: {
+            'name': _('Project deleted'),
+            'description': _('')
+        },
+        TASK_CREATED: {
+            'name': _('Task created'),
+            'description': _('')
+        },
+        TASK_UPDATED: {
+            'name': _('Task updated'),
+            'description': _('')
+        },
+        TASK_DELETED: {
+            'name': _('Task deleted'),
+            'description': _('')
+        },
+        ANNOTATION_CREATED: {
+            'name': _('Annotation created'),
+            'description': _('')
+        },
+        ANNOTATION_UPDATED: {
+            'name': _('Annotation updated'),
+            'description': _('')
+        },
+        ANNOTATION_DELETED: {
+            'name': _('Annotation deleted'),
+            'description': _('')
+        },
+    }
 
     webhook = models.ForeignKey(Webhook, on_delete=models.CASCADE, related_name='actions')
 
-    action = models.CharField(_('action of webhook'), choices=ACTIONS, max_length=128, db_index=True,)
+    action = models.CharField(
+        _('action of webhook'),
+        choices=[[key, value['name']] for key, value in ACTIONS.items()],
+        max_length=128, db_index=True,
+    )
 
     class Meta:
         db_table = 'webhook_action'
