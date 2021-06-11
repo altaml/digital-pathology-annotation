@@ -43,6 +43,17 @@ if not Path(output_path).is_dir():
     output_path.mkdir(parents=True, exist_ok=True)
 
 
+def _run_histogram_equalization(rgb_img):
+    '''
+    Adjust contrast by equalizing saturation channel
+    '''
+    hsvImg = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2HSV)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(100, 100))
+    hsvImg[..., 1] = clahe.apply(hsvImg[..., 1])
+    equalized_img = cv2.cvtColor(hsvImg, cv2.COLOR_HSV2BGR)
+    return equalized_img
+
+
 for svs_file in Path(input_path).glob('*.svs'):
     img_list, thumbnail = read_svs(svs_file, thumbnail_only=thumbnail)
     # Save thumbnail
@@ -54,6 +65,7 @@ for svs_file in Path(input_path).glob('*.svs'):
     cv2.imwrite(output_file, thumbnail)
     logging.info(f'Thumbnail saved at {output_file}.')
     for index, img in enumerate(img_list):
+        img = _run_histogram_equalization(img)
         output_file = str(
             Path(output_path) / (svs_file.stem + '_' + str(index) + str(output_format))
         )
