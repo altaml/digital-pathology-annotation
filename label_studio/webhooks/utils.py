@@ -10,6 +10,10 @@ from .models import Webhook, WebhookAction
 
 
 def run_webhook(webhook, action, payload=None):
+    """Run one webhook for action.
+
+    This function must not raise any exceptions.
+    """
     data = {
         'action': action,
     }
@@ -27,7 +31,11 @@ def run_webhook(webhook, action, payload=None):
         return
 
 
-def emit_event(organization, action, instanses=None):
+def emit_webhooks_for_instanses(organization, action, instanses=None):
+    """Run all active webhooks for the action using instanses as payload.
+
+    Be sure WebhookAction.ACTIONS contains all required fields.
+    """
     webhooks = Webhook.objects.filter(
         Q(organization=organization) &
         Q(is_active=True) &
@@ -42,6 +50,8 @@ def emit_event(organization, action, instanses=None):
     if not webhooks.exists():
         return
     payload = None
+    # if instanses and there is a webhook that sends payload
+    # get serialized payload
     if instanses and webhooks.filter(send_payload=True).exists():
         serializer_class = WebhookAction.ACTIONS[action].get('serializer')
         if serializer_class:
@@ -52,11 +62,23 @@ def emit_event(organization, action, instanses=None):
 
 
 def api_webhook(action):
+    """Decorator emit webhooks for APIView methods: post, put, patch.
+
+    Used for simple Create/Update methods.
+    The decorator expects authorized request and response with 'id' key in data.
+
+    Example:
+        ```
+        @api_webhook(WebhookAction.PROJECT_UPDATED)
+        def put(self, request, *args, **kwargs):
+            return super(ProjectAPI, self).put(request, *args, **kwargs)
+        ```
+    """
     def decorator(func):
         @wraps(func)
         def wrap(self, request, *args, **kwargs):
             responce = func(self, request, *args, **kwargs)
-            emit_event(
+            emit_webhooks_for_instanses(
                 request.user.active_organization,
                 action,
                 [WebhookAction.ACTIONS[action]['model'].objects.get(id=responce.data.get('id'))]
@@ -66,13 +88,26 @@ def api_webhook(action):
     return decorator
 
 
-def api_delete_webhook(action):
+def api_webhook_for_delete(action):
+    """Decorator emit webhooks for APIView delete method.
+
+    The decorator expects authorized request and use get_object() method 
+    before delete.
+
+    Example:
+        ```
+        @swagger_auto_schema(tags=['Annotations'])
+        @api_webhook_for_delete(WebhookAction.ANNOTATION_DELETED)
+        def delete(self, request, *args, **kwargs):
+            return super(AnnotationAPI, self).delete(request, *args, **kwargs)
+        ```
+    """
     def decorator(func):
         @wraps(func)
         def wrap(self, request, *args, **kwargs):
             obj = {'id': self.get_object().pk}
             responce = func(self, request, *args, **kwargs)
-            emit_event(
+            emit_webhooks_for_instanses(
                 request.user.active_organization,
                 action,
                 [obj]

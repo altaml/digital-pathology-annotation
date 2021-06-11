@@ -25,7 +25,7 @@ from tasks.serializers import (
     TaskSerializer, AnnotationSerializer, TaskSimpleSerializer, PredictionSerializer,
     TaskWithAnnotationsAndPredictionsAndDraftsSerializer, AnnotationDraftSerializer)
 from projects.models import Project
-from webhooks.utils import api_webhook, api_delete_webhook
+from webhooks.utils import api_webhook, api_webhook_for_delete
 from webhooks.models import WebhookAction
 
 logger = logging.getLogger(__name__)
@@ -181,7 +181,7 @@ class AnnotationAPI(RequestDebugLogMixin, generics.RetrieveUpdateDestroyAPIView)
         return super(AnnotationAPI, self).patch(request, *args, **kwargs)
 
     @swagger_auto_schema(tags=['Annotations'])
-    @api_delete_webhook(WebhookAction.ANNOTATION_DELETED)
+    @api_webhook_for_delete(WebhookAction.ANNOTATION_DELETED)
     def delete(self, request, *args, **kwargs):
         return super(AnnotationAPI, self).delete(request, *args, **kwargs)
 

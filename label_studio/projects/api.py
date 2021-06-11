@@ -29,8 +29,8 @@ from projects.serializers import (
 )
 from tasks.models import Task, Annotation, Prediction, TaskLock
 from tasks.serializers import TaskSerializer, TaskWithAnnotationsAndPredictionsAndDraftsSerializer
-from webhooks.utils import api_webhook, api_delete_webhook
-from webhooks.models import WebhookAction, Webhook
+from webhooks.utils import api_webhook, api_webhook_for_delete, emit_webhooks_for_instanses
+from webhooks.models import WebhookAction
 
 from core.mixins import APIViewVirtualRedirectMixin, APIViewVirtualMethodMixin
 from core.permissions import all_permissions, ViewClassPermission
@@ -175,7 +175,7 @@ class ProjectAPI(APIViewVirtualRedirectMixin,
         return super(ProjectAPI, self).get(request, *args, **kwargs)
 
     @swagger_auto_schema(tags=['Projects'])
-    @api_delete_webhook(WebhookAction.PROJECT_DELETED)
+    @api_webhook_for_delete(WebhookAction.PROJECT_DELETED)
     def delete(self, request, *args, **kwargs):
         return super(ProjectAPI, self).delete(request, *args, **kwargs)
 
@@ -585,7 +585,7 @@ class TasksListAPI(generics.ListCreateAPIView,
         project = generics.get_object_or_404(Project.objects.for_user(self.request.user), pk=self.kwargs['pk'])
         task_ids = list(Task.objects.filter(project=project).values('id'))
         Task.objects.filter(project=project).delete()
-        Webhook.emit_event(request.user.active_organization, WebhookAction.TASK_DELETED, task_ids)
+        emit_webhooks_for_instanses(request.user.active_organization, WebhookAction.TASK_DELETED, task_ids)
         return Response(data={'tasks': task_ids}, status=204)
 
     @swagger_auto_schema(**paginator_help('tasks', 'Projects'))
