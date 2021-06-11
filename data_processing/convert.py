@@ -53,3 +53,9 @@ for svs_file in Path(input_path).glob('*.svs'):
     )
     cv2.imwrite(output_file, thumbnail)
     logging.info(f'Thumbnail saved at {output_file}.')
+    for index, img in enumerate(img_list):
+        output_file = str(
+            Path(output_path) / (svs_file.stem + '_' + str(index) + str(output_format))
+        )
+        cv2.imwrite(output_file, img)
+        logging.info(f'Saved image {output_file} of size {img.shape}')
