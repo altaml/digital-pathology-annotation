@@ -26,7 +26,7 @@ args = parser.parse_args()
 input_path = args.path
 output_format = args.format
 output_path = Path(args.output_dir)
-thumbnail = not args.feature
+thumbnail_flag = not bool(args.feature)
 FORMAT_LIST = ['.jpg', '.png', '.tiff']
 
 if output_format not in FORMAT_LIST:
@@ -55,7 +55,7 @@ def _run_histogram_equalization(rgb_img):
 
 
 for svs_file in Path(input_path).glob('*.svs'):
-    img_list, thumbnail = read_svs(svs_file, thumbnail_only=thumbnail)
+    img_list, thumbnail = read_svs(svs_file, thumbnail_only=thumbnail_flag)
     # Save thumbnail
     thumbnail = _run_histogram_equalization(thumbnail)
 
