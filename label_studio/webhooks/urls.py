@@ -9,6 +9,7 @@ _api_urlpatterns = [
     # CRUD
     path('', api.WebhookListAPI.as_view(), name='webhook-list'),
     path('<int:pk>/', api.WebhookAPI.as_view(), name='webhook-detail'),
+    path('info/', api.WebhookInfoAPI.as_view(), name='webhook-info')
 ]
 
 urlpatterns = [
