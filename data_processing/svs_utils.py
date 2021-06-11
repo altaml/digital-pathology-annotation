@@ -5,34 +5,72 @@ import cv2
 from PIL import Image
 
 
-def read_svs(fpath, show_info=False):
-    """
-    Read the slide image from .svs file
+def read_svs(fpath, show_info=False, thumbnail_only=True):
+    '''
+    Read the slide image from .svs file. Returns thumbnail and optionally high resolution images of tissues
     :param {Path} fpath: Path to the location of the svs file to be read.
     :param {bool} show_info: If set prints metadata about svs.
-    """
+    :param {bool} thumbail_only: If set returns only thumbail of svs.
+    '''
     try:
+        logging.info('Thumbnail image being read')
         slide_image = OpenSlide(str(fpath))
         if show_info:
-            print(slide_image.level_count)
-            print(slide_image.level_dimensions)
-            print(slide_image.level_downsamples)
-
-        image = np.uint8(
+            print('Level Count', slide_image.level_count)
+            print('Resolutions', slide_image.level_dimensions)
+            print('Scale', slide_image.level_downsamples)
+        level = slide_image.level_count - 1
+        scale_factor = int(slide_image.level_downsamples[-1])
+        img_size = slide_image.level_dimensions[-1]
+        thumbnail = np.uint8(
             np.array(
                 slide_image.read_region(
                     (0, 0),
-                    slide_image.level_count - 1,
-                    slide_image.level_dimensions[-1],
+                    level,
+                    img_size,
                 )
             )[:, :, :3]
         )
-        logging.info("Image read successfully")
-        return image
+        if thumbnail_only:
+            logging.warn(
+                'svs reader is only generating thumbails. Tissues not generated.'
+            )
+            return [], thumbnail
+        logging.info('High magnification processing. Tissue extraction')
+        cropped_cells, bbox = _isolate_cells_tissues_from_svs(
+            image=thumbnail,
+            return_coords=True,
+            show_thresholded=False,
+        )
+        high_rez_cropped_cells = []
+        for boundRect in bbox:
+            # Check for minimum size
+            x, y, width, height = boundRect
+            logging.info(
+                f'High rez dimensions: {scale_factor*(width)}, {scale_factor*(height)}'
+            )
+            logging.info(
+                f'Size conversion: {[x,y,x+width,y+width]}:{[scale_factor*x, scale_factor*y,scale_factor*(x+width), scale_factor*(y+height)]} '
+            )
+
+            img = np.uint8(
+                np.array(
+                    slide_image.read_region(
+                        (scale_factor * x, scale_factor * y),
+                        0,
+                        (scale_factor * (width), scale_factor * (height)),
+                    )
+                )[:, :, :3]
+            )
+            logging.info(f'Image extracted {img.shape}')
+            high_rez_cropped_cells.append(img)
+        logging.info(f'Generated {len(high_rez_cropped_cells)} tissues')
+        return high_rez_cropped_cells, thumbnail
 
     except IOError as e:
-        logging.error(f"Cant read {fpath}. {e}")
+        logging.error(f'Cant read {fpath}. {e}')
         raise IOError(e)
+
 
 # Helper functions
 def _isolate_cells_tissues_from_svs(
