@@ -12,7 +12,7 @@ docker run -i -t dpatho
 #### Local
 To install locally in conda enviornments
 ```
-pip install -r requirements
+pip install -r requirements.txt
 conda install pixman=0.36.0
 python data_processing/convert.py --path <SOURCE_FOLDER> --format .png --output_dir <DESTINATION_FOLDER>
 ```
