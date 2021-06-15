@@ -1,7 +1,8 @@
 name: Build Label Studio image
 
 env:
-  REPOSITORY_NAME: digital-pathology/label-studio
+  REPOSITORY_NAME: digital-pathology-label-studio
+  DOCKERHUB_ACCOUNT: chaholl
   DOCKERFILE_PATH: Dockerfile
   DOCKER_ROOT_PATH: .
 
@@ -46,5 +47,5 @@ jobs:
     - name: Tag, and push image to DockerHub
       if: ${{ env.DO_DEPLOY=='true' }}    
       run: |
-        docker tag $REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_NAME:$IMAGE_TAG
-        docker push $REPOSITORY_NAME:$IMAGE_TAG
+        docker tag $DOCKERHUB_ACCOUNT/$REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_NAME:$IMAGE_TAG
+        docker push $DOCKERHUB_ACCOUNT/$REPOSITORY_NAME:$IMAGE_TAG
