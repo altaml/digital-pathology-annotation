@@ -47,5 +47,5 @@ jobs:
     - name: Tag, and push image to DockerHub
       if: ${{ env.DO_DEPLOY=='true' }}    
       run: |
-        docker tag $DOCKERHUB_ACCOUNT/$REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_NAME:$IMAGE_TAG
+        docker tag $REPOSITORY_NAME:$IMAGE_TAG $DOCKERHUB_ACCOUNT/$REPOSITORY_NAME:$IMAGE_TAG
         docker push $DOCKERHUB_ACCOUNT/$REPOSITORY_NAME:$IMAGE_TAG
